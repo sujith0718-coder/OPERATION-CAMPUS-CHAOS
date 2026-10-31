@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OPERATION: CAMPUS CHAOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#07040d; --ink:#f4efff; --muted:#a79cc4;
+  --orange:#ff7a1a; --red:#ff2d4d; --purple:#9d4dff; --yellow:#ffd21f;
+  --glass:rgba(18,10,32,.6); --line:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Rajdhani',system-ui,sans-serif;overflow:hidden}
+
+/* ---------- Cinematic overlays ---------- */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+body::after{content:"";position:fixed;inset:-50%;pointer-events:none;z-index:9999;opacity:.07;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation:grain 1s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,3%)}80%{transform:translate(3%,-1%)}100%{transform:translate(0,0)}}
+
+/* ---------- Screens ---------- */
+.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;opacity:0;visibility:hidden;transform:scale(1.04);transition:opacity .6s ease,transform .6s ease,visibility .6s}
+.screen.active{opacity:1;visibility:visible;transform:none}
+
+/* ---------- Shared UI ---------- */
+.tag{font-family:'Oswald',sans-serif;font-size:.78rem;letter-spacing:.3em;color:var(--yellow);text-transform:uppercase;border-left:3px solid var(--red);padding-left:10px}
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(12px);box-shadow:0 20px 50px -30px rgba(0,0,0,.9)}
+.gta-btn{position:relative;font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;
+  background:linear-gradient(100deg,var(--orange),var(--red));border:none;padding:15px 30px;
+  clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);cursor:pointer;
+  box-shadow:0 0 24px rgba(255,80,40,.45);transition:transform .2s,box-shadow .2s,filter .2s;overflow:hidden;font-size:1rem}
+.gta-btn::after{content:"";position:absolute;top:0;left:-75%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);transition:left .6s}
+.gta-btn:hover:not(:disabled){transform:translateY(-2px) scale(1.03);box-shadow:0 0 36px rgba(255,120,40,.8)}
+.gta-btn:hover:not(:disabled)::after{left:125%}
+.gta-btn:disabled{filter:grayscale(1) brightness(.5);cursor:not-allowed}
+.gta-btn.alt{background:linear-gradient(100deg,var(--purple),#5b2bff);box-shadow:0 0 24px rgba(157,77,255,.5)}
+.gta-btn.yellow{background:linear-gradient(100deg,var(--yellow),var(--orange));color:#140a00;box-shadow:0 0 24px rgba(255,210,31,.45)}
+.gta-btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none}
+.gta-btn.big{font-size:1.3rem;padding:20px 48px}
+.icon-btn{font-family:'Oswald',sans-serif;letter-spacing:.15em;background:transparent;color:var(--ink);border:1px solid var(--line);padding:9px 14px;cursor:pointer;font-size:.8rem;text-transform:uppercase;transition:.2s}
+.icon-btn:hover{border-color:var(--orange);color:var(--orange)}
+
+/* ---------- Toasts / FX ---------- */
+#toasts{position:fixed;top:92px;right:16px;z-index:8000;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{width:min(340px,calc(100vw - 32px));background:rgba(12,6,22,.94);border-left:4px solid var(--orange);padding:12px 16px;display:flex;flex-direction:column;gap:3px;box-shadow:0 10px 30px -10px rgba(0,0,0,.8);animation:toastIn .45s cubic-bezier(.2,.8,.2,1) both;transition:opacity .4s,transform .4s}
+.toast b{font-family:'Oswald',sans-serif;letter-spacing:.15em;color:var(--orange);font-size:.95rem;text-transform:uppercase}
+.toast span{font-size:.98rem}
+.toast.ok{border-color:var(--yellow)}.toast.ok b{color:var(--yellow)}
+.toast.warn{border-color:var(--red)}.toast.warn b{color:var(--red)}
+.toast.rival{border-color:var(--purple)}.toast.rival b{color:#c9a6ff}
+.toast.out{opacity:0;transform:translateX(40px)}
+@keyframes toastIn{from{opacity:0;transform:translateX(70px)}}
+
+.fx{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:rgba(4,2,9,.78);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s}
+.fx.show{opacity:1;pointer-events:auto}
+.fx-box{text-align:center;padding:20px}
+.accepted small{font-family:'Oswald',sans-serif;letter-spacing:.35em;color:var(--yellow);font-size:.9rem}
+.accepted h2{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:clamp(3.2rem,12vw,8rem);line-height:.9;color:#fff;
+  text-shadow:0 0 30px var(--orange),6px 6px 0 var(--red);animation:slam .7s cubic-bezier(.2,.8,.2,1) both}
+.accepted p{font-family:'Oswald',sans-serif;font-size:1.4rem;letter-spacing:.15em;color:var(--orange);margin-top:10px;text-transform:uppercase}
+.count{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(7rem,25vw,16rem);color:#fff;line-height:1;text-shadow:0 0 40px var(--purple),0 0 80px var(--purple);animation:slam .6s both}
+.complete h2{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:clamp(3rem,10vw,7rem);line-height:.95;color:var(--yellow);text-shadow:0 0 30px var(--orange),5px 5px 0 var(--red);animation:slam .6s both}
+.complete p{font-family:'Oswald',sans-serif;letter-spacing:.2em;text-transform:uppercase;margin-top:8px;font-size:1.2rem}
+@keyframes slam{0%{transform:scale(2.6);opacity:0}60%{transform:scale(.92);opacity:1}100%{transform:scale(1)}}
+
+/* ---------- Landing ---------- */
+#landing{background:
+  radial-gradient(ellipse at 15% 20%,rgba(157,77,255,.35),transparent 50%),
+  radial-gradient(ellipse at 85% 25%,rgba(255,122,26,.28),transparent 45%),
+  radial-gradient(ellipse at 50% 120%,rgba(255,45,77,.25),transparent 55%),#07040d;
+  background-size:160% 160%;animation:bgShift 14s ease-in-out infinite alternate}
+@keyframes bgShift{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+.city{position:absolute;left:0;bottom:0;width:100%;height:55%;opacity:.95;pointer-events:none}
+.city .win{animation:flick 3s steps(2) infinite}
+.city .win.flick{animation-duration:.6s}
+@keyframes flick{50%{opacity:.2}}
+.beam{position:absolute;top:-20%;left:-30%;width:30%;height:140%;background:linear-gradient(90deg,transparent,rgba(255,210,31,.12),transparent);transform:rotate(18deg);animation:beam 8s ease-in-out infinite alternate;pointer-events:none}
+@keyframes beam{from{left:-30%}to{left:95%}}
+.landing-wrap{position:relative;z-index:2;min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:36px clamp(20px,6vw,80px);gap:22px;max-width:1100px}
+.hud-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.title{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;line-height:.86;filter:drop-shadow(0 0 22px rgba(255,122,26,.45)) drop-shadow(5px 5px 0 rgba(157,77,255,.8))}
+.t1{display:block;font-size:clamp(2rem,6vw,4.4rem);color:var(--yellow);letter-spacing:.12em}
+.t2{display:block;font-size:clamp(3.4rem,13vw,10rem)}
+.ch{display:inline-block;opacity:0;animation:letterIn .8s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--d) * 1ms + 250ms)}
+.t2 .ch{background:linear-gradient(180deg,#fff 10%,var(--yellow) 45%,var(--orange) 80%,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes letterIn{0%{opacity:0;transform:translateY(70px) skewX(-18deg);filter:blur(8px)}60%{opacity:1;transform:translateY(-6px) skewX(-8deg);filter:blur(0)}100%{opacity:1;transform:none}}
+.subtitle{font-family:'Oswald',sans-serif;font-size:clamp(1rem,2.4vw,1.5rem);text-transform:uppercase;letter-spacing:.2em;color:var(--orange);text-shadow:0 0 14px rgba(255,122,26,.6);animation:fadeUp .8s 1.6s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.briefing{padding:18px 22px;max-width:720px;border-left:4px solid var(--purple);animation:fadeUp .8s 1.2s both}
+.brief-head{font-family:'Oswald',sans-serif;color:var(--purple);letter-spacing:.25em;font-size:.8rem;margin-bottom:8px}
+.brief-text{font-size:1.2rem;white-space:pre-line;min-height:6.5em;line-height:1.5}
+.brief-text::after{content:'▋';color:var(--orange);animation:flick .9s steps(2) infinite;margin-left:3px}
+.instr{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:900px;animation:fadeUp .8s 2s both}
+.instr div{background:var(--glass);border:1px solid var(--line);padding:16px 16px 16px 20px;position:relative;overflow:hidden;font-size:1rem;line-height:1.35}
+.instr div::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(var(--orange),var(--purple))}
+.instr b{display:block;font-family:'Bebas Neue',Impact,sans-serif;font-size:2.2rem;color:var(--orange);line-height:1;font-weight:400}
+.cta{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#enterBtn{opacity:0;transform:translateY(10px);transition:opacity .6s,transform .6s}
+#enterBtn.ready{opacity:1;transform:none}
+
+/* ---------- Setup ---------- */
+#setup{background:radial-gradient(circle at 80% 10%,rgba(157,77,255,.25),transparent 40%),#07040d;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px}
+.setup-wrap{width:min(680px,100%)}
+.setup-head h2{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:clamp(2.6rem,7vw,4.2rem);letter-spacing:.05em;line-height:1;margin-top:8px;margin-bottom:22px}
+.back{background:none;border:none;color:var(--muted);font-family:'Oswald',sans-serif;letter-spacing:.2em;cursor:pointer}
+.panel{padding:26px;display:flex;flex-direction:column;gap:18px;position:relative}
+.panel::before{content:'';position:absolute;top:-1px;left:-1px;width:60px;height:60px;border-top:3px solid var(--orange);border-left:3px solid var(--orange)}
+label{display:flex;flex-direction:column;gap:6px;font-family:'Oswald',sans-serif;letter-spacing:.15em;font-size:.82rem;color:var(--muted);text-transform:uppercase}
+input,textarea{background:rgba(0,0,0,.45);border:none;border-bottom:2px solid var(--purple);color:var(--ink);font:500 1.1rem 'Rajdhani',sans-serif;padding:12px;outline:none;transition:border-color .2s,box-shadow .2s;resize:vertical}
+input:focus,textarea:focus{border-color:var(--orange);box-shadow:0 8px 24px -10px rgba(255,122,26,.6)}
+input:disabled{color:var(--yellow);font-family:'Oswald',sans-serif;letter-spacing:.08em}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.set-label{font-family:'Oswald',sans-serif;letter-spacing:.25em;color:var(--yellow);font-size:.85rem}
+.sets{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.set-card{position:relative;cursor:pointer;padding:18px;background:rgba(0,0,0,.35);border:1px solid var(--line);transition:transform .25s,border-color .25s,box-shadow .25s;color:var(--ink);display:flex;flex-direction:column;gap:6px;text-transform:none;letter-spacing:0;font-size:1rem}
+.set-card input{position:absolute;opacity:0;pointer-events:none}
+.set-card b{font-family:'Bebas Neue',Impact,sans-serif;font-size:1.9rem;letter-spacing:.08em;font-weight:400}
+.set-card span{font-size:.95rem;color:var(--muted)}
+.set-card:hover{transform:translateY(-3px)}
+.set-card.selected{border-color:var(--orange);box-shadow:0 0 30px -6px rgba(255,122,26,.7),inset 0 0 40px rgba(255,122,26,.08)}
+.set-card.selected::after{content:'SELECTED';position:absolute;top:10px;right:10px;font-family:'Oswald',sans-serif;font-size:.7rem;letter-spacing:.2em;color:var(--orange)}
+#setupForm .gta-btn{align-self:flex-start}
+
+/* ---------- Game / Dashboard ---------- */
+#game{background:radial-gradient(ellipse at 90% -10%,rgba(157,77,255,.25),transparent 45%),radial-gradient(ellipse at 0% 100%,rgba(255,45,77,.12),transparent 40%),#07040d}
+.hud{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px clamp(14px,3vw,36px);background:rgba(7,4,13,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hud-brand{font-family:'Bebas Neue',Impact,sans-serif;font-size:2rem;letter-spacing:.06em;line-height:1;font-weight:400}
+.hud-brand span{color:var(--orange);margin-left:6px}
+.hud-team small{display:block;font-family:'Oswald',sans-serif;font-size:.7rem;letter-spacing:.25em;color:var(--muted)}
+.hud-team b{font-family:'Oswald',sans-serif;font-size:1.15rem;letter-spacing:.06em}
+.hud-team em{font-style:normal;font-family:'Oswald',sans-serif;color:var(--yellow);margin-left:8px;font-size:.85rem}
+.hud-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mode-switch{display:flex;border:1px solid var(--line)}
+.mode-switch button{background:transparent;border:0;color:var(--muted);font-family:'Oswald',sans-serif;letter-spacing:.15em;padding:9px 14px;cursor:pointer;font-size:.8rem}
+.mode-switch button.on{background:linear-gradient(90deg,var(--purple),#5b2bff);color:#fff}
+.wrap{width:min(1200px,100%);margin:0 auto;padding:24px clamp(14px,3vw,36px) 60px;display:flex;flex-direction:column;gap:22px}
+.status{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:18px 20px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat small,.dest small{display:block;font-family:'Oswald',sans-serif;font-size:.72rem;letter-spacing:.25em;color:var(--muted)}
+.stat b{font-family:'Bebas Neue',Impact,sans-serif;font-size:2.6rem;letter-spacing:.04em;font-weight:400;line-height:1.1}
+#stTimer{font-family:'Oswald',sans-serif;font-size:2.1rem;font-weight:700}
+#stStatus{font-size:2.2rem}
+.progress{grid-column:1/-1;padding:0 20px 16px}
+.bar{height:12px;background:rgba(255,255,255,.07);position:relative;overflow:hidden;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.bar::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:sheen 2.2s infinite;transform:translateX(-100%)}
+@keyframes sheen{to{transform:translateX(100%)}}
+#barFill{height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--red),var(--orange),var(--yellow));transition:width 1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 18px var(--orange)}
+.dest{grid-column:1/-1;padding:14px 20px;border-top:1px solid var(--line);background:linear-gradient(90deg,rgba(255,122,26,.18),transparent)}
+#stDest{font-family:'Oswald',sans-serif;font-size:1.3rem;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow)}
+.map-panel{padding:18px 20px 12px;display:flex;flex-direction:column;gap:12px;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:32px 32px}
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:'Oswald',sans-serif;letter-spacing:.1em;font-size:.8rem}
+.chip{padding:6px 12px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.chip.done{background:var(--yellow);color:#140a00;border-color:var(--yellow)}
+.chip.active{background:var(--purple);color:#fff;border-color:var(--purple);animation:pulse 1.4s infinite}
+.chip.pending{border-color:var(--red);color:var(--red)}
+.chip.available{border-color:var(--orange);color:var(--orange);box-shadow:0 0 12px -2px var(--orange)}
+.arrow{color:var(--orange)}
+#mapSvg{width:100%;height:auto;max-height:260px}
+.route-base{fill:none;stroke:rgba(255,255,255,.18);stroke-width:3;stroke-dasharray:6 8}
+.route-fill{fill:none;stroke:var(--yellow);stroke-width:4;stroke-dasharray:100 100;transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 6px var(--orange))}
+.node{transition:opacity .4s}
+.node .core{fill:#15091f;stroke:rgba(255,255,255,.35);stroke-width:2;transition:fill .4s,stroke .4s}
+.node .num{fill:var(--ink);font-family:'Oswald',sans-serif;font-size:15px;font-weight:700}
+.node .nl{fill:var(--muted);font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.12em}
+.node .ring{fill:none;stroke:transparent;stroke-width:2;transform-box:fill-box;transform-origin:center}
+.node.n-done .core{fill:var(--yellow);stroke:var(--yellow)}
+.node.n-done .num{fill:#140a00}
+.node.n-active .core{fill:var(--purple);stroke:#fff}
+.node.n-available .core{stroke:var(--orange);stroke-width:3}
+.node.n-pending .core{stroke:var(--red);fill:#2a0a14}
+.node.n-locked{opacity:.5}
+.node.n-available .ring,.node.n-active .ring,.node.n-pending .ring{stroke:var(--orange);animation:ringPulse 1.6s infinite}
+.node.n-active .ring{stroke:var(--purple)}
+@keyframes ringPulse{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.7);opacity:0}}
+.sec-title{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:2rem;letter-spacing:.08em;display:flex;align-items:center;gap:12px}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--orange),transparent)}
+.mission-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.mcard{position:relative;padding:20px;background:linear-gradient(160deg,rgba(30,16,48,.92),rgba(10,5,18,.95));border:1px solid var(--line);
+  transition:transform .25s ease,border-color .3s,box-shadow .3s,filter .3s;animation:cardIn .6s var(--d,0ms) backwards;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.mcard:hover{border-color:rgba(255,122,26,.6)}
+@keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+.mcard.st-locked{filter:grayscale(.9) brightness(.55)}
+.mcard.st-available{border-color:var(--orange);box-shadow:0 0 30px -12px rgba(255,122,26,.9)}
+.mcard.st-active{border-color:var(--purple);animation:cardIn .6s var(--d,0ms) backwards,activeGlow 2s infinite alternate;box-shadow:0 0 40px -10px rgba(157,77,255,.95)}
+@keyframes activeGlow{to{box-shadow:0 0 62px -4px rgba(157,77,255,1)}}
+.mcard.st-pending{border-color:var(--red);box-shadow:0 0 30px -12px rgba(255,45,77,.8)}
+.mcard.st-done{border-color:rgba(255,210,31,.5);background:linear-gradient(160deg,rgba(60,40,8,.6),rgba(10,5,18,.95))}
+.mcard.st-done::after{content:'CLEARED';position:absolute;right:-34px;top:32px;transform:rotate(35deg);background:var(--yellow);color:#140a00;font-family:'Oswald',sans-serif;letter-spacing:.2em;padding:4px 44px;font-size:.8rem;font-weight:700}
+.mc-top{display:flex;justify-content:space-between;font-family:'Oswald',sans-serif;font-size:.75rem;letter-spacing:.2em;color:var(--orange)}
+.mstate{color:var(--muted)}
+.mcard h4{font-family:'Bebas Neue',Impact,sans-serif;font-size:2rem;letter-spacing:.04em;font-weight:400;line-height:1}
+.mdesc{color:#cfc4e6;font-size:1rem;line-height:1.4}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.95rem}
+dt{font-family:'Oswald',sans-serif;color:var(--purple);letter-spacing:.15em;font-size:.72rem;padding-top:3px}
+dd{color:var(--ink)}
+.mc-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.verify{font-family:'Oswald',sans-serif;font-size:.72rem;letter-spacing:.15em;color:var(--muted)}
+.verify.req{color:var(--red)}
+.mc-foot .gta-btn{width:100%}
+.banner{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--yellow);background:linear-gradient(90deg,rgba(255,210,31,.22),transparent);font-family:'Oswald',sans-serif;letter-spacing:.1em;font-size:1.1rem}
+.lower{display:grid;gap:18px;align-items:start}
+body.is-vol .lower{grid-template-columns:1.4fr 1fr}
+body:not(.is-vol) .lower{grid-template-columns:1fr}
+.lb-panel,.vol-panel{padding:20px}
+.lb-panel h3,.vol-panel h3{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:1.8rem;letter-spacing:.06em;margin-bottom:12px;color:var(--yellow)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.98rem;min-width:480px}
+th{font-family:'Oswald',sans-serif;font-weight:400;font-size:.7rem;letter-spacing:.2em;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:10px 6px;border-bottom:1px solid rgba(255,255,255,.05)}
+tr{transition:background .4s}
+tr.me td{background:rgba(255,122,26,.12)}
+tr.flash td{background:rgba(157,77,255,.38)}
+.rk{font-family:'Bebas Neue',Impact,sans-serif;font-size:1.3rem;color:var(--orange)}
+.tn{font-family:'Oswald',sans-serif;letter-spacing:.06em}
+.tn em{font-style:normal;color:var(--yellow);font-size:.7rem;letter-spacing:.2em;margin-left:6px}
+.dot{display:inline-block;width:8px;height:8px;background:var(--purple);transform:rotate(45deg);margin-right:10px;box-shadow:0 0 8px var(--purple)}
+.pips{display:flex;gap:4px}
+.pip{width:14px;height:6px;background:rgba(255,255,255,.12);transform:skewX(-20deg)}
+.pip.on{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.clock{font-family:'Oswald',sans-serif;letter-spacing:.05em}
+.badge{font-family:'Oswald',sans-serif;font-size:.7rem;letter-spacing:.12em;padding:4px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.ok{border-color:var(--yellow);color:var(--yellow)}
+.badge.hot{border-color:var(--purple);color:#c9a6ff}
+.badge.warn{border-color:var(--red);color:var(--red)}
+.vol-panel{display:none}
+body.is-vol .vol-panel{display:block}
+.vol-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.vol-row small{font-family:'Oswald',sans-serif;color:var(--muted);letter-spacing:.2em;font-size:.72rem}
+.vol-row b{font-family:'Oswald',sans-serif;letter-spacing:.04em;text-align:right;font-weight:600}
+.vol-actions{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.vol-actions .gta-btn{width:100%}
+.foot-note{font-family:'Oswald',sans-serif;font-size:.7rem;letter-spacing:.25em;color:var(--muted);text-align:center;margin-top:10px}
+
+/* ---------- Victory ---------- */
+#victory{background:radial-gradient(circle at 50% 30%,rgba(255,122,26,.35),transparent 50%),radial-gradient(circle at 50% 100%,rgba(157,77,255,.3),transparent 55%),#07040d;display:grid;place-items:center;text-align:center;padding:30px}
+.vic-box{position:relative;z-index:2;display:flex;flex-direction:column;gap:14px;align-items:center}
+.vic-title{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:clamp(3.2rem,11vw,9rem);line-height:.88;color:#fff;text-shadow:0 0 30px var(--orange),0 0 80px var(--red);animation:glitch 2.6s infinite,slam .9s both}
+@keyframes glitch{0%,90%,100%{text-shadow:0 0 30px var(--orange),0 0 80px var(--red)}92%{text-shadow:-5px 0 var(--purple),5px 0 var(--yellow)}94%{text-shadow:5px 0 var(--purple),-5px 0 var(--yellow)}96%{text-shadow:0 0 30px var(--orange)}}
+.vic-team{font-family:'Oswald',sans-serif;letter-spacing:.25em;color:var(--yellow);font-size:1.2rem}
+.vic-time{font-family:'Oswald',sans-serif;font-size:clamp(2.6rem,8vw,4.6rem);letter-spacing:.08em;font-weight:700}
+.vic-time small{display:block;font-size:.8rem;letter-spacing:.35em;color:var(--muted);font-weight:400}
+.badge-win{margin-top:6px;padding:14px 30px;border:2px solid var(--yellow);background:linear-gradient(135deg,rgba(255,210,31,.25),rgba(255,122,26,.1));font-family:'Bebas Neue',Impact,sans-serif;font-size:2rem;letter-spacing:.1em;color:var(--yellow);clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);animation:pulse 1.6s infinite}
+.vic-msg{color:var(--muted);max-width:520px;font-size:1.05rem}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(255,210,31,0)}50%{box-shadow:0 0 30px rgba(255,210,31,.55)}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8500}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  .status{grid-template-columns:1fr 1fr}
+  .stat:nth-child(2){border-right:0}
+  .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line)}
+}
+@media (max-width:640px){
+  .row2,.sets{grid-template-columns:1fr}
+  .instr{grid-template-columns:1fr}
+  .hud{justify-content:center}
+  .hud-brand{font-size:1.6rem}
+  .stat b{font-size:2rem}
+  #stTimer{font-size:1.6rem}
+  .gta-btn{padding:14px 22px}
+  .title .t2{font-size:clamp(3rem,16vw,5rem)}
+}
+</style>
+</head>
+<body>
+
+<div id="toasts"></div>
+<div id="fx" class="fx"></div>
+<canvas id="confetti"></canvas>
+
+<!-- ============ LANDING ============ -->
+<section id="landing" class="screen active">
+  <svg id="city" class="city" viewBox="0 0 1200 400" preserveAspectRatio="none"></svg>
+  <div class="beam"></div>
+  <div class="landing-wrap">
+    <div class="hud-top">
+      <span class="tag">CLASSIFIED // CAMPUS MISSION 2026</span>
+      <button class="icon-btn sound-btn" data-action="sound">SOUND: OFF</button>
+    </div>
+    <h1 class="title">
+      <span class="t1" id="t1"></span>
+      <span class="t2" id="t2"></span>
+    </h1>
+    <p class="subtitle">Your Campus. Your Mission. Your Victory.</p>
+    <div class="briefing glass">
+      <div class="brief-head">MISSION BRIEFING // INCOMING TRANSMISSION</div>
+      <p id="brief" class="brief-text"></p>
+    </div>
+    <div class="instr">
+      <div><b>01</b>Form a crew. Name your team and pick SET ALPHA or SET BRAVO.</div>
+      <div><b>02</b>Run missions in order. Only one mission is live at a time.</div>
+      <div><b>03</b>Clear all five before rival crews. Verified missions need a volunteer.</div>
+    </div>
+    <div class="cta">
+      <button class="gta-btn big" id="enterBtn" data-action="enter" disabled>ENTER THE GAME</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SETUP ============ -->
+<section id="setup" class="screen">
+  <div class="setup-wrap">
+    <div class="setup-head">
+      <button class="back" data-action="back">← BACK TO BRIEFING</button>
+      <span class="tag">STEP 01 // OPERATIVE REGISTRATION</span>
+      <h2>BUILD YOUR CREW</h2>
+    </div>
+    <form id="setupForm" class="glass panel">
+      <label>Team name
+        <input name="team" maxlength="28" required placeholder="e.g. Neon Ghosts" autocomplete="off" />
+      </label>
+      <div class="row2">
+        <label>Team leader
+          <input name="leader" maxlength="40" required placeholder="Leader name" autocomplete="off" />
+        </label>
+        <label>Team ID (auto)
+          <input id="teamId" disabled value="AWAITING NAME" />
+        </label>
+      </div>
+      <label>Team members (comma separated)
+        <textarea name="members" rows="3" maxlength="200" placeholder="Aarav, Meera, Ravi"></textarea>
+      </label>
+      <div class="set-label">CHOOSE MISSION SET</div>
+      <div class="sets">
+        <label class="set-card selected">
+          <input type="radio" name="set" value="ALPHA" checked />
+          <b>SET ALPHA</b>
+          <span>Riddles, photo ops, decoding, detective work.</span>
+        </label>
+        <label class="set-card">
+          <input type="radio" name="set" value="BRAVO" />
+          <b>SET BRAVO</b>
+          <span>Word puzzles, mental math, coordination, mystery objects.</span>
+        </label>
+      </div>
+      <button class="gta-btn yellow" type="submit">LOCK IN MISSION</button>
+    </form>
+  </div>
+</section>
+
+<!-- ============ GAME DASHBOARD ============ -->
+<section id="game" class="screen">
+  <header class="hud">
+    <div class="hud-brand">CAMPUS<span>CHAOS</span></div>
+    <div class="hud-team">
+      <small>ACTIVE CREW</small>
+      <b id="hudTeam">—</b><em id="hudId"></em>
+    </div>
+    <div class="hud-controls">
+      <div class="mode-switch">
+        <button id="modePlayer" data-action="mode" data-mode="player" class="on">PLAYER</button>
+        <button id="modeVol" data-action="mode" data-mode="volunteer">VOLUNTEER</button>
+      </div>
+      <button class="icon-btn sound-btn" data-action="sound">SOUND: OFF</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="banner"></div>
+
+    <section class="status glass">
+      <div class="stat"><small>CURRENT MISSION</small><b id="stMission">01 / 05</b></div>
+      <div class="stat"><small>COMPLETION</small><b id="stPct">0%</b></div>
+      <div class="stat"><small>ELAPSED</small><b id="stTimer">00:00:00</b></div>
+      <div class="stat"><small>STATUS</small><b id="stStatus">READY</b></div>
+      <div class="progress"><div class="bar"><div id="barFill"></div></div></div>
+      <div class="dest"><small>NEXT DESTINATION</small><b id="stDest">—</b></div>
+    </section>
+
+    <section class="glass map-panel">
+      <div class="chain" id="chain"></div>
+      <svg id="mapSvg" viewBox="0 0 600 220" aria-label="Mission route map"></svg>
+    </section>
+
+    <h3 class="sec-title">MISSION LIST // <span id="setName">SET ALPHA</span></h3>
+    <section id="missionGrid" class="mission-grid"></section>
+
+    <div class="lower">
+      <section class="glass lb-panel">
+        <h3>LIVE LEADERBOARD</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>RANK</th><th>TEAM</th><th>MISSIONS</th><th>TIME</th><th>STATUS</th></tr></thead>
+            <tbody id="lbBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="volPanel" class="glass vol-panel">
+        <h3>VOLUNTEER CONSOLE</h3>
+        <div class="vol-row"><small>TEAM</small><b id="volTeam">—</b></div>
+        <div class="vol-row"><small>PROGRESS</small><b id="volProg">—</b></div>
+        <div class="vol-row"><small>PHASE</small><b id="volPhase">—</b></div>
+        <div class="vol-row"><small>NEXT MISSION</small><b id="volNext">—</b></div>
+        <div class="vol-actions">
+          <button class="gta-btn alt" data-action="approve" id="approveBtn" disabled>APPROVE COMPLETION</button>
+          <button class="gta-btn ghost" data-action="reset">RESET DEMO PROGRESS</button>
+        </div>
+      </section>
+    </div>
+    <div class="foot-note">DEMO BUILD // FRONTEND SIMULATION // PROGRESS SAVED LOCALLY</div>
+  </main>
+</section>
+
+<!-- ============ VICTORY ============ -->
+<section id="victory" class="screen">
+  <div class="vic-box">
+    <span class="tag">OPERATION COMPLETE</span>
+    <h2 class="vic-title">MISSION<br>ACCOMPLISHED</h2>
+    <div class="vic-team" id="vicTeam">—</div>
+    <div class="vic-time" id="vicTime">00:00:00</div>
+    <div class="badge-win" id="vicBadge">★ MISSION CLEAR BADGE ★</div>
+    <p class="vic-msg" id="vicMsg"></p>
+    <button class="gta-btn yellow big" data-action="again">PLAY AGAIN</button>
+  </div>
+</section>
+
+<script>
+/* ==================== DATA ==================== */
+const MISSION_SETS = {
+  ALPHA: {
+    name: 'SET ALPHA',
+    missions: [
+      { title:'The Missing Code', desc:'A riddle has vanished from the notice board. Solve it: "I have keys but open no locks, and I speak in notes." Say the answer to a volunteer.', location:'Library Ground Floor', objective:'Solve the riddle and state the answer to a volunteer.', verify:false },
+      { title:'The Photographer', desc:'Stage a team photo that looks like a movie poster. Dramatic lighting, bold pose, one prop.', location:'Central Stage Plaza', objective:'Capture a creative group photo with every member in frame.', verify:true },
+      { title:'The Secret Agent', desc:'A message is hidden on the canteen stall board, written in a simple shift cipher. Decode it.', location:'Canteen Stall Row', objective:'Decode the hidden message using the stall cipher card.', verify:true },
+      { title:'The Campus Detective', desc:'Three clues point to one campus location. Walk there, read the plaque, and trace the clue trail.', location:'Auditorium Block', objective:'Identify the location and collect the stamp from its clue point.', verify:true },
+      { title:'The Final Boss', desc:'The last challenge. Every team member must contribute. No second chances on the final stamp.', location:'Main Ground', objective:'Complete the final challenge and collect the final stamp.', verify:true }
+    ]
+  },
+  BRAVO: {
+    name: 'SET BRAVO',
+    missions: [
+      { title:'The First Clue', desc:'A scrambled word is pinned to the admin corridor board. Unscramble it to reveal the next stop.', location:'Admin Block Corridor', objective:'Solve the word puzzle and report the word to a volunteer.', verify:false },
+      { title:'The Human Calculator', desc:'Mental math under pressure. Teams take turns solving a chain of operations with no calculators.', location:'Mechanical Workshop Yard', objective:'Complete the arithmetic chain and get the volunteer sign-off.', verify:true },
+      { title:'The Silent Squad', desc:'Coordinate without speaking. Move as one unit through a sequence of hand signals and timed actions.', location:'Sports Complex Gate', objective:'Finish the coordination challenge as a full squad.', verify:true },
+      { title:'The Hidden Identity', desc:'A mystery object sits under a cloth at the science wing. Identify it from three hints.', location:'Science Block Lab Wing', objective:'Name the mystery object and claim its stamp.', verify:true },
+      { title:'The Final Showdown', desc:'Head to the open-air stage. The final challenge decides the operation.', location:'Open Air Theatre', objective:'Complete the final showdown and collect the final stamp.', verify:true }
+    ]
+  }
+};
+
+const KEY = 'campus-chaos-demo-v1';
+const defaultState = () => ({ team:null, completed:0, phase:'idle', startedAt:null, finishedAt:null, mode:'player', sound:false });
+let state = defaultState();
+try { state = { ...defaultState(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch(e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
+
+/* ==================== HELPERS ==================== */
+const $ = id => document.getElementById(id);
+const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function show(id){ $$('.screen').forEach(s => s.classList.toggle('active', s.id === id)); }
+
+function teamIdFrom(name){
+  let h = 0;
+  for (const ch of name.toUpperCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return 'CC-' + h.toString(36).toUpperCase().padStart(4, '0').slice(-4);
+}
+
+function currentMission(){ return MISSION_SETS[state.team.set].missions[Math.min(state.completed, 4)]; }
+
+function missionStatus(i){
+  if (i < state.completed) return 'done';
+  if (i === state.completed) {
+    if (state.phase === 'active') return 'active';
+    if (state.phase === 'pending') return 'pending';
+    return 'available';
+  }
+  return 'locked';
+}
+
+function elapsedMs(){
+  if (!state.startedAt) return 0;
+  return (state.finishedAt || Date.now()) - state.startedAt;
+}
+
+function fmtSecs(total){
+  total = Math.max(0, Math.floor(total));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+}
+
+/* ==================== AUDIO ==================== */
+const AC = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+const SFX = {
+  click:    [[880, .05]],
+  accept:   [[440, .12], [660, .12], [880, .3]],
+  complete: [[523, .12], [659, .12], [784, .12], [1046, .4]]
+};
+function sfx(name){
+  if (!state.sound || !AC) return;
+  try {
+    actx = actx || new AC();
+    if (actx.state === 'suspended') actx.resume();
+    let t = actx.currentTime;
+    (SFX[name] || []).forEach(([f, d]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      g.gain.setValueAtTime(.06, t);
+      g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t + d + .02);
+      t += d * .9;
+    });
+  } catch(e) {}
+}
+function renderSound(){
+  $$('.sound-btn').forEach(b => b.textContent = 'SOUND: ' + (state.sound ? 'ON' : 'OFF'));
+}
+
+/* ==================== NOTIFICATIONS & FX ==================== */
+function notify(title, text, type='info'){
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<b>${esc(title)}</b><span>${esc(text)}</span>`;
+  $('toasts').appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 3600);
+}
+
+function showFx(html, ms){
+  const fx = $('fx');
+  fx.innerHTML = `<div class="fx-box">${html}</div>`;
+  fx.classList.add('show');
+  return sleep(ms).then(() => { fx.classList.remove('show'); return sleep(250); });
+}
+
+/* ==================== BOOT VISUALS ==================== */
+function buildCity(){
+  const svg = $('city');
+  let x = 0, html = '';
+  const palette = ['#ffd21f','#ff7a1a','#9d4dff','#ff2d4d'];
+  while (x < 1200){
+    const w = 40 + Math.random() * 70, h = 80 + Math.random() * 220;
+    const col = Math.random() < .5 ? '#120a1e' : '#0d0716';
+    html += `<rect x="${x}" y="${400 - h}" width="${w}" height="${h}" fill="${col}"/>`;
+    for (let wy = 400 - h + 14; wy < 390; wy += 18)
+      for (let wx = x + 8; wx < x + w - 10; wx += 14)
+        if (Math.random() < .18){
+          const c = palette[Math.floor(Math.random() * palette.length)];
+          html += `<rect class="win${Math.random() < .2 ? ' flick' : ''}" x="${wx}" y="${wy}" width="6" height="8" fill="${c}"/>`;
+        }
+    x += w + Math.random() * 6;
+  }
+  svg.innerHTML = html;
+}
+
+function splitInto(el, text, base){
+  el.innerHTML = [...text].map((c, i) =>
+    `<span class="ch" style="--d:${base + i * 45}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('');
+}
+
+async function typeBrief(){
+  const lines = [
+    'Attention operatives. The campus has been compromised.',
+    'Five missions. Scattered across stalls, blocks and open grounds.',
+    'Solve. Photograph. Decode. Deduce. Coordinate.',
+    'Move fast. Stay sharp. Only the first crew home wins.'
+  ];
+  const el = $('brief');
+  await sleep(1500);
+  let out = '';
+  for (const line of lines){
+    for (const ch of line){ out += ch; el.textContent = out; await sleep(18); }
+    out += '\n';
+    await sleep(420);
+  }
+  const b = $('enterBtn');
+  b.disabled = false;
+  b.classList.add('ready');
+}
+
+/* ==================== SETUP & LAUNCH ==================== */
+const setupForm = $('setupForm');
+let busy = false;
+
+setupForm.addEventListener('input', e => {
+  if (e.target.name === 'team') $('teamId').value = e.target.value.trim() ? teamIdFrom(e.target.value.trim()) : 'AWAITING NAME';
+});
+$$('input[name=set]', setupForm).forEach(r => r.addEventListener('change', () => {
+  $$('.set-card').forEach(c => c.classList.toggle('selected', c.querySelector('input').checked));
+  sfx('click');
+}));
+setupForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if (busy) return;
+  busy = true;
+  launch(new FormData(setupForm)).finally(() => busy = false);
+});
+
+async function launch(fd){
+  const name = String(fd.get('team') || '').trim();
+  const leader = String(fd.get('leader') || '').trim();
+  const members = String(fd.get('members') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 8);
+  const set = fd.get('set') === 'BRAVO' ? 'BRAVO' : 'ALPHA';
+  if (!name || !leader) return;
+
+  state.team = { name, leader, members, set, id: teamIdFrom(name) };
+  Object.assign(state, { completed:0, phase:'idle', startedAt:null, finishedAt:null });
+  save();
+  sfx('accept');
+
+  await showFx(`<div class="accepted"><small>CONTRACT SIGNED // ${MISSION_SETS[set].name}</small><h2>MISSION ACCEPTED</h2><p>${esc(name)}</p></div>`, 1900);
+  for (const n of ['3','2','1','GO']) await showFx(`<div class="count">${n}</div>`, 620);
+
+  state.startedAt = Date.now();
+  save();
+  show('game');
+  renderGame();
+  renderLeaderboard();
+  notify('OPERATION LIVE', 'Head to ' + MISSION_SETS[set].missions[0].location, 'ok');
+}
+
+/* ==================== MISSION ACTIONS ==================== */
+function startMission(){
+  if (!state.team || state.phase !== 'idle' || state.completed >= 5) return;
+  state.phase = 'active';
+  save(); sfx('click');
+  const m = currentMission();
+  notify('MISSION STARTED', `${m.title} — proceed to ${m.location}`, 'info');
+  renderGame();
+}
+
+function submitMission(){
+  if (!state.team || state.phase !== 'active') return;
+  const m = currentMission();
+  if (m.verify){
+    state.phase = 'pending';
+    save(); sfx('click');
+    notify('SUBMITTED', 'Awaiting volunteer verification at ' + m.location, 'warn');
+    renderGame();
+  } else {
+    completeMission();
+  }
+}
+
+function approveMission(){
+  if (!state.team || state.phase !== 'pending') return;
+  notify('APPROVED', 'Volunteer verified the stamp.', 'ok');
+  completeMission();
+}
+
+function completeMission(){
+  const m = currentMission();
+  state.completed++;
+  state.phase = 'idle';
+  const finalDone = state.completed >= 5;
+  if (finalDone) state.finishedAt = Date.now();
+  save(); sfx('complete');
+
+  showFx(`<div class="complete"><h2>MISSION COMPLETE</h2><p>${esc(m.title)}</p></div>`, 2000);
+  renderGame();
+  renderLeaderboard();
+
+  if (finalDone){
+    setTimeout(showVictory, 2400);
+  } else {
+    const next = MISSION_SETS[state.team.set].missions[state.completed];
+    setTimeout(() => notify('NEXT DESTINATION', `${next.title} — ${next.location}`, 'ok'), 2300);
+  }
+}
+
+function resetProgress(){
+  if (!state.team) return;
+  Object.assign(state, { completed:0, phase:'idle', startedAt:Date.now(), finishedAt:null });
+  initRivals();
+  save();
+  renderGame();
+  renderLeaderboard();
+  notify('DEMO RESET', 'Progress wiped. Fresh operation started.', 'ok');
+}
+
+/* ==================== RENDERING: DASHBOARD ==================== */
+const STATE_LABEL = { locked:'LOCKED', available:'AVAILABLE', active:'IN PROGRESS', pending:'PENDING VERIFY', done:'COMPLETE' };
+const CHIP_LABELS = ['MISSION 01','MISSION 02','MISSION 03','MISSION 04','FINAL MISSION'];
+
+function cardHTML(m, i){
+  const st = missionStatus(i);
+  const isFinal = i === 4;
+  let btn = '';
+  if (st === 'locked')         btn = `<button class="gta-btn ghost" disabled>LOCKED</button>`;
+  else if (st === 'done')      btn = `<button class="gta-btn ghost" disabled>✔ COMPLETED</button>`;
+  else if (st === 'available') btn = `<button class="gta-btn" data-action="start">START MISSION</button>`;
+  else if (st === 'active')    btn = `<button class="gta-btn yellow" data-action="submit">MISSION COMPLETED</button>`;
+  else if (st === 'pending')   btn = state.mode === 'volunteer'
+      ? `<button class="gta-btn alt" data-action="approve">APPROVE COMPLETION</button>`
+      : `<button class="gta-btn alt" disabled>AWAITING VOLUNTEER</button>`;
+
+  const verify = m.verify
+    ? `<span class="verify req">● VOLUNTEER VERIFY REQUIRED</span>`
+    : `<span class="verify">● SELF-CLEARED</span>`;
+
+  return `
+    <article class="mcard st-${st}" style="--d:${i * 90}ms">
+      <div class="mc-top"><span>${isFinal ? 'MISSION 05 // FINAL' : 'MISSION 0' + (i + 1)}</span><span class="mstate">${STATE_LABEL[st]}</span></div>
+      <h4>${esc(m.title)}</h4>
+      <p class="mdesc">${esc(m.desc)}</p>
+      <dl>
+        <dt>LOCATION</dt><dd>${esc(m.location)}</dd>
+        <dt>OBJECTIVE</dt><dd>${esc(m.objective)}</dd>
+      </dl>
+      <div class="mc-foot">${verify}${btn}</div>
+    </article>`;
+}
+
+function renderMap(){
+  const xs = [80, 190, 300, 410, 520], ys = [150, 62, 150, 62, 150];
+  const D = `M${xs[0]} ${ys[0]} L${xs[1]} ${ys[1]} L${xs[2]} ${ys[2]} L${xs[3]} ${ys[3]} L${xs[4]} ${ys[4]}`;
+  const pct = Math.min(state.completed, 4) / 4 * 100;
+  let nodes = '';
+  for (let i = 0; i < 5; i++){
+    const st = missionStatus(i), x = xs[i], y = ys[i];
+    const ly = y < 100 ? y - 40 : y + 50;
+    nodes += `<g class="node n-${st}">
+      <circle class="ring" cx="${x}" cy="${y}" r="24"/>
+      <circle class="core" cx="${x}" cy="${y}" r="20"/>
+      <text class="num" x="${x}" y="${y + 6}" text-anchor="middle">${i < 4 ? '0' + (i + 1) : '★'}</text>
+      <text class="nl" x="${x}" y="${ly}" text-anchor="middle">${i < 4 ? 'MISSION 0' + (i + 1) : 'FINAL'}</text>
+    </g>`;
+  }
+  $('mapSvg').innerHTML = `
+    <path class="route-base" d="${D}"/>
+    <path class="route-fill" d="${D}" pathLength="100" style="stroke-dashoffset:${100 - pct}"/>
+    ${nodes}`;
+}
+
+function renderGame(){
+  if (!state.team){ show('landing'); return; }
+  const t = state.team, set = MISSION_SETS[t.set];
+  const finished = state.completed >= 5;
+  const cur = finished ? null : set.missions[state.completed];
+
+  $('hudTeam').textContent = t.name.toUpperCase();
+  $('hudId').textContent = t.id;
+  $('setName').textContent = set.name;
+  $('stMission').textContent = String(Math.min(state.completed + 1, 5)).padStart(2, '0') + ' / 05';
+
+  const pct = Math.round(state.completed / 5 * 100);
+  $('stPct').textContent = pct + '%';
+  $('barFill').style.width = pct + '%';
+  $('stStatus').textContent = finished ? 'CLEARED' : ({ idle:'READY', active:'ON MISSION', pending:'VERIFYING' })[state.phase];
+  $('stDest').textContent = finished ? 'EXTRACTION POINT — MAIN GROUND' : cur.location;
+
+  $('banner').innerHTML = finished
+    ? `<div class="banner glass"><span>★ ALL OBJECTIVES CLEARED — RESULTS READY</span><button class="gta-btn yellow" data-action="victory">VIEW RESULTS</button></div>`
+    : '';
+
+  $('chain').innerHTML = CHIP_LABELS.map((l, i) => {
+    const st = missionStatus(i);
+    const cls = st === 'locked' ? '' : st;
+    return `<span class="chip ${cls}">${l}</span>${i < 4 ? '<span class="arrow">→</span>' : ''}`;
+  }).join('');
+
+  renderMap();
+  $('missionGrid').innerHTML = set.missions.map((m, i) => cardHTML(m, i)).join('');
+
+  // volunteer console
+  $('volTeam').textContent = t.name.toUpperCase();
+  $('volProg').textContent = `${state.completed} / 5 MISSIONS`;
+  $('volPhase').textContent = finished ? 'COMPLETE' : ({ idle:'AWAITING START', active:'IN FIELD', pending:'VERIFICATION REQUIRED' })[state.phase];
+  $('volNext').textContent = finished ? 'NONE — EXTRACT' : `${cur.title} · ${cur.location}`;
+  $('approveBtn').disabled = state.phase !== 'pending';
+
+  // modes & sound
+  $('modePlayer').classList.toggle('on', state.mode === 'player');
+  $('modeVol').classList.toggle('on', state.mode === 'volunteer');
+  document.body.classList.toggle('is-vol', state.mode === 'volunteer');
+  renderSound();
+  updateClock();
+}
+
+function updateClock(){
+  const t = fmtSecs(elapsedMs() / 1000);
+  if ($('stTimer')) $('stTimer').textContent = t;
+}
+
+/* ==================== LEADERBOARD ==================== */
+let rivals = [];
+const RIVAL_NAMES = ['NIGHT OWLS','CRIMSON SYNDICATE','VICE SQUAD','SUNSET CARTEL','BLUE RIDGE CREW','NEON GHOSTS','IRON HUSTLE','RIOT PROTOCOL'];
+const RIVAL_SEED = { done:[2,2,1,1,1,0,0,0], elapsed:[1900,1700,1450,1200,1100,700,500,300] };
+function initRivals(){
+  rivals = RIVAL_NAMES.map((name, i) => ({
+    key:'r' + i, name, done:RIVAL_SEED.done[i], elapsed:RIVAL_SEED.elapsed[i], finished:false, finishAt:null
+  }));
+}
+initRivals();
+
+function leaderEntries(){
+  const list = rivals.map(r => ({
+    key:r.key, name:r.name, done:r.done,
+    secs: r.finished ? r.finishAt : r.elapsed,
+    status: r.finished ? 'FINISHED' : ['SEARCHING','DECODING','IN TRANSIT','ON STAGE'][r.done % 4]
+  }));
+  if (state.team){
+    list.push({
+      key:'me', name:state.team.name.toUpperCase(), me:true,
+      done:state.completed,
+      secs:Math.floor(elapsedMs() / 1000),
+      status: state.completed >= 5 ? 'FINISHED'
+            : state.phase === 'pending' ? 'AWAITING VERIFY'
+            : state.phase === 'active' ? 'ON MISSION'
+            : state.startedAt ? 'READY' : 'STANDBY'
+    });
+  }
+  list.sort((a, b) => (b.done - a.done) || (a.secs - b.secs));
+  return list;
+}
+
+const rowEls = new Map();
+function statusClass(s){
+  return s === 'FINISHED' ? 'ok' : s === 'AWAITING VERIFY' ? 'warn' : s === 'ON MISSION' ? 'hot' : '';
+}
+
+function renderLeaderboard(){
+  const body = $('lbBody');
+  if (!body) return;
+  const list = leaderEntries();
+
+  // FLIP step 1: record positions
+  const before = new Map();
+  rowEls.forEach((el, k) => before.set(k, el.getBoundingClientRect().top));
+
+  list.forEach((e, i) => {
+    let tr = rowEls.get(e.key);
+    if (!tr){ tr = document.createElement('tr'); rowEls.set(e.key, tr); }
+    tr.className = e.me ? 'me' : '';
+    tr.innerHTML = `
+      <td class="rk">#${i + 1}</td>
+      <td class="tn"><i class="dot"></i>${esc(e.name)}${e.me ? '<em>YOU</em>' : ''}</td>
+      <td><div class="pips">${[0,1,2,3,4].map(n => `<i class="pip ${n < e.done ? 'on' : ''}"></i>`).join('')}</div></td>
+      <td class="clock">${fmtSecs(e.secs)}</td>
+      <td><span class="badge ${statusClass(e.status)}">${e.status}</span></td>`;
+    body.appendChild(tr);
+  });
+
+  rowEls.forEach((el, k) => {
+    if (!list.find(e => e.key === k)){ el.remove(); rowEls.delete(k); }
+  });
+
+  // FLIP step 2: animate movers
+  rowEls.forEach((el, k) => {
+    const old = before.get(k);
+    if (old == null) return;
+    const dy = old - el.getBoundingClientRect().top;
+    if (Math.abs(dy) > 1){
+      el.animate([{ transform:`translateY(${dy}px)` }, { transform:'translateY(0)' }],
+        { duration:550, easing:'cubic-bezier(.2,.8,.2,1)' });
+      el.classList.add('flash');
+      setTimeout(() => el.classList.remove('flash'), 600);
+    }
+  });
+}
+
+/* ==================== VICTORY ==================== */
+const cv = $('confetti'), cctx = cv.getContext('2d');
+const COLS = ['#ffd21f','#ff7a1a','#ff2d4d','#9d4dff','#ffffff'];
+let parts = [], raf = null;
+function resizeCv(){ cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', resizeCv); resizeCv();
+
+function confettiBurst(){
+  for (let i = 0; i < 160; i++){
+    parts.push({
+      x: innerWidth * (.3 + Math.random() * .4), y: innerHeight * .35,
+      vx: (Math.random() - .5) * 16, vy: -Math.random() * 18 - 6,
+      g: .32, s: Math.random() * 9 + 5, r: Math.random() * 6,
+      vr: (Math.random() - .5) * .35, c: COLS[(Math.random() * COLS.length) | 0], life: 0
+    });
+  }
+  if (!raf) raf = requestAnimationFrame(confettiLoop);
+}
+function confettiLoop(){
+  cctx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => {
+    p.vy += p.g; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.r);
+    cctx.fillStyle = p.c; cctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cctx.restore();
+  });
+  parts = parts.filter(p => p.y < cv.height + 30 && p.life < 420);
+  raf = parts.length ? requestAnimationFrame(confettiLoop) : null;
+}
+
+function showVictory(){
+  const secs = Math.floor(elapsedMs() / 1000);
+  $('vicTeam').textContent = state.team.name.toUpperCase();
+  $('vicTime').innerHTML = `${fmtSecs(secs)}<small>COMPLETION TIME</small>`;
+  const champion = !rivals.some(r => r.finished && r.finishAt < secs);
+  $('vicBadge').textContent = champion ? '★ CHAMPION BADGE ★' : '★ MISSION CLEAR BADGE ★';
+  $('vicMsg').textContent = champion
+    ? 'Every objective cleared before any rival crew. The campus belongs to you.'
+    : 'Every objective cleared. A rival crew got there first. Run it back.';
+  show('victory');
+  sfx('accept');
+  confettiBurst();
+  setTimeout(confettiBurst, 900);
+  setTimeout(confettiBurst, 1800);
+}
+
+/* ==================== EVENTS ==================== */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el || el.disabled) return;
+  switch (el.dataset.action){
+    case 'enter':
+      sfx('click');
+      if (state.team && state.startedAt){ show('game'); renderGame(); renderLeaderboard(); }
+      else show('setup');
+      break;
+    case 'back': show('landing'); break;
+    case 'start': startMission(); break;
+    case 'submit': submitMission(); break;
+    case 'approve': approveMission(); break;
+    case 'mode':
+      state.mode = el.dataset.mode === 'volunteer' ? 'volunteer' : 'player';
+      save(); sfx('click'); renderGame();
+      break;
+    case 'sound':
+      state.sound = !state.sound;
+      save(); renderSound(); sfx('click');
+      break;
+    case 'reset':
+      if (confirm('Reset demo progress? Your crew stays registered.')) resetProgress();
+      break;
+    case 'victory': showVictory(); break;
+    case 'again':
+      resetProgress();
+      show('game');
+      renderGame();
+      confettiLoop && (parts = []);
+      break;
+  }
+});
+
+// Subtle 3D tilt on mission cards
+document.addEventListener('mousemove', e => {
+  const hovered = e.target.closest ? e.target.closest('.mcard') : null;
+  $$('.mcard').forEach(c => {
+    if (c !== hovered) c.style.transform = '';
+  });
+  if (!hovered) return;
+  const r = hovered.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - .5;
+  const y = (e.clientY - r.top) / r.height - .5;
+  hovered.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 8}deg)`;
+});
+
+/* ==================== TICKERS ==================== */
+// Clock + rival progression (every second)
+setInterval(() => {
+  rivals.forEach(r => { if (!r.finished) r.elapsed++; });
+  updateClock();
+  renderLeaderboard();
+}, 1000);
+
+// Rival mission clears (live competition)
+setInterval(() => {
+  const open = rivals.filter(r => !r.finished);
+  if (!open.length || Math.random() < .3) return;
+  const r = open[Math.floor(Math.random() * open.length)];
+  r.done++;
+  if (r.done >= 5){ r.done = 5; r.finished = true; r.finishAt = r.elapsed; }
+  if (state.team){
+    notify(r.finished ? 'RIVAL CLEARED' : 'RIVAL UPDATE',
+      `${r.name} ${r.finished ? 'finished all missions' : 'cleared mission ' + String(r.done).padStart(2, '0')}`,
+      'rival');
+  }
+  renderLeaderboard();
+}, 7000);
+
+/* ==================== INIT ==================== */
+splitInto($('t1'), 'OPERATION:', 0);
+splitInto($('t2'), 'CAMPUS CHAOS', 350);
+buildCity();
+typeBrief();
+renderSound();
+renderLeaderboard();
+</script>
+</body>
+</html>
